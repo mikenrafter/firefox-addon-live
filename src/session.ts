@@ -306,7 +306,10 @@ export class FirefoxSession {
 	/** Creates (or finds) a container by name, returning its userContextId. */
 	async ensureContainer(name: string, color = 'blue', icon = 'fingerprint'): Promise<number> {
 		return await this.chrome(`
-			const { ContextualIdentityService } = ChromeUtils.importESModule('resource://gre/modules/ContextualIdentityService.sys.mjs')
+			// The module moved to moz-src:/// in Firefox 154; older builds only have resource://.
+			const load = (url) => { try { return ChromeUtils.importESModule(url).ContextualIdentityService } catch { return undefined } }
+			const ContextualIdentityService = load('moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs')
+				?? load('resource://gre/modules/ContextualIdentityService.sys.mjs')
 			// Built-in containers carry an l10nId instead of a name; compare display labels.
 			const existing = ContextualIdentityService.getPublicIdentities()
 				.find((identity) => ContextualIdentityService.getUserContextLabel(identity.userContextId) === arguments[0])

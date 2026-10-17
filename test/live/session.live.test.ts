@@ -57,6 +57,14 @@ describe('FirefoxSession', () => {
 		expect(await tabs()).toEqual(before)
 	})
 
+	it('creates and reuses containers', async () => {
+		const work = await session.ensureContainer('Live Work', 'orange', 'briefcase')
+		expect(work).toBeGreaterThan(0)
+		expect(await session.ensureContainer('Live Work')).toBe(work)
+		await session.openTab('http://links.example/', work)
+		expect(await session.chrome('return gBrowser.selectedBrowser.getAttribute("usercontextid")')).toBe(String(work))
+	})
+
 	it('clicks the browser action with the real pointer', async () => {
 		await session.openTab('http://links.example/')
 		await settle(session)
