@@ -10,7 +10,7 @@ Drive a throwaway Firefox with your add-on loaded, from TypeScript. Use it for l
 
 It speaks Marionette (Firefox's remote protocol) directly; there is no Selenium or geckodriver.
 
-Used by [ContainMarks](https://gitlab.com/mikenrafter/containMarks), [Permanent Container Tabs](https://gitlab.com/mikenrafter/permanent-container-tabs), [Get Clone](https://github.com/mikenrafter/get-clone) and [Anubis Fast](https://github.com/mikenrafter/anubis-fast).
+Used by [ContainMarks](https://gitlab.com/mikenrafter/containMarks), [Permanent Container Tabs](https://gitlab.com/mikenrafter/permanent-container-tabs), [Get Clone](https://gitlab.com/mikenrafter/get-clone) and [Anubis Fast](https://gitlab.com/mikenrafter/anubis-fast).
 
 ## Setup
 
