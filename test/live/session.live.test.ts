@@ -4,6 +4,7 @@
  */
 
 import { mkdtemp, rm, stat } from 'node:fs/promises'
+import { createServer, type Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -12,21 +13,30 @@ import { FirefoxSession, addonButtonId, menuItem, openAddonPreferences, settle }
 const ADDON_ID = 'fixture@firefox-addon-live'
 let session: FirefoxSession
 let out: string
+let upstream: Server
 
 const stored = (key: string) => session.asExtension('return (await browser.storage.local.get(args[0]))[args[0]] ?? null', [key])
 
 beforeAll(async () => {
 	out = await mkdtemp(join(tmpdir(), 'firefox-addon-live-test-'))
+	upstream = createServer((request, response) => {
+		response.writeHead(200, { 'content-type': 'text/html' })
+		response.end(`<title>Upstream</title><p id="seen">${request.headers.host} ${request.url}</p>`)
+	})
+	await new Promise<void>((done) => upstream.listen(0, '127.0.0.1', () => done()))
+	const port = (upstream.address() as { port: number }).port
 	session = await FirefoxSession.start({
 		width: 800,
 		height: 562,
 		addon: { source: resolve(import.meta.dirname, '../fixture-addon'), id: ADDON_ID },
+		upstreams: { 'real.example': `http://127.0.0.1:${port}` },
 		pages: { 'links.example': { title: 'Links', body: '<h1>Links</h1><p><a id="target" href="http://docs.example/page">Docs</a></p>' } },
 	})
 }, 90_000)
 
 afterAll(async () => {
 	await session?.close()
+	upstream?.close()
 	await rm(out, { recursive: true, force: true })
 })
 
@@ -66,6 +76,11 @@ describe('FirefoxSession', () => {
 		await openAddonPreferences(session)
 		await session.realClick({ inlineOptions: '#flag' })
 		await expect.poll(() => stored('flag')).toBe(true)
+	})
+
+	it('forwards upstream hosts to a real server', async () => {
+		await session.openTab('http://real.example/path?q=1')
+		expect(await session.content("return document.getElementById('seen').textContent")).toBe('real.example /path?q=1')
 	})
 
 	it('writes scaled stills and GIFs of the display', async () => {

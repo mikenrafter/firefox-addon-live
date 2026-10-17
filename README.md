@@ -4,7 +4,7 @@ Drive a throwaway Firefox with your add-on loaded, from TypeScript. Use it for l
 
 - Runs vanilla Firefox (from nixpkgs) on a private Xvfb display, so menus, panels and popups render for real and nothing touches your desktop.
 - Clicks with the real X pointer (`xdotool`), so context menus, page actions and toolbar buttons behave as they do for users.
-- Serves fixture pages for any `http://` hostname through a local proxy (`http://mail.example/`), so no network is needed.
+- Serves fixture pages for any `http://` hostname through a local proxy (`http://mail.example/`), so no network is needed. `upstreams` sends chosen hostnames to a real local server instead.
 - Records PNG stills and looping GIFs (ffmpeg, two-pass palette) of exactly what happened.
 - Profile, add-on copy and X server are temporary and removed on `close()`.
 

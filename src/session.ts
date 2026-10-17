@@ -15,7 +15,7 @@
 
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { createServer, type Server } from 'node:http'
+import { createServer, request as httpRequest, type Server } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
@@ -56,6 +56,12 @@ export interface FirefoxSessionOptions {
 	bookmarksToolbar?: boolean
 	/** Pages served for `http://<host><path>`, keyed by `host` or `host/path`. */
 	pages?: Record<string, FixturePage>
+	/**
+	 * Hosts whose requests go to a real local server instead of a fixture page,
+	 * e.g. `{ 'docs.example': 'http://127.0.0.1:8923' }`. Method, path, headers
+	 * (including Host) and body are forwarded as-is.
+	 */
+	upstreams?: Record<string, string>
 	/** Extra prefs written to user.js. */
 	prefs?: Record<string, string | number | boolean>
 	/** The add-on under test. Omit to run a plain Firefox. */
@@ -104,7 +110,7 @@ export class FirefoxSession {
 		}
 
 		try {
-			const proxy = await startFixtureProxy(options.pages ?? {})
+			const proxy = await startFixtureProxy(options.pages ?? {}, options.upstreams ?? {})
 			disposers.push(() => new Promise<void>((done) => proxy.server.close(() => done())))
 
 			let display: string | undefined
@@ -614,9 +620,23 @@ function userJs(prefs: Record<string, string | number | boolean>): string {
 	return `${Object.entries(prefs).map(([name, value]) => `user_pref(${JSON.stringify(name)}, ${JSON.stringify(value)});`).join('\n')}\n`
 }
 
-async function startFixtureProxy(pages: Record<string, FixturePage>): Promise<{ server: Server, port: number }> {
+async function startFixtureProxy(pages: Record<string, FixturePage>, upstreams: Record<string, string>): Promise<{ server: Server, port: number }> {
 	const server = createServer((request, response) => {
 		const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`)
+		const upstream = upstreams[url.host]
+		if (upstream) {
+			const target = new URL(`${url.pathname}${url.search}`, upstream)
+			const forward = httpRequest(target, { method: request.method, headers: request.headers }, (reply) => {
+				response.writeHead(reply.statusCode ?? 502, reply.headers)
+				reply.pipe(response)
+			})
+			forward.on('error', (error) => {
+				response.writeHead(502, { 'content-type': 'text/plain' })
+				response.end(`firefox-addon-live: ${url.host} → ${upstream} failed: ${error.message}`)
+			})
+			request.pipe(forward)
+			return
+		}
 		const page = pages[`${url.host}${url.pathname}`] ?? pages[url.host]
 		const title = escapeHtml(page?.title ?? url.host)
 		response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
