@@ -90,7 +90,8 @@ export class MarionetteClient {
 	}
 
 	async createSession(capabilities: Record<string, unknown> = {}): Promise<string> {
-		const value = await this.command('WebDriver:NewSession', { capabilities }) as Record<string, unknown>
+		// The first session waits for the browser window to finish starting up, which is slow on a busy machine.
+		const value = await this.command('WebDriver:NewSession', { capabilities }, Math.max(this.timeoutMs, 120_000)) as Record<string, unknown>
 		const sessionId = String(value.sessionId ?? '')
 		if (!sessionId) throw new Error('Marionette did not return a session id')
 		this.sessionId = sessionId
@@ -163,7 +164,7 @@ export class MarionetteClient {
 		}
 	}
 
-	private async command(name: string, parameters: Record<string, unknown>): Promise<unknown> {
+	private async command(name: string, parameters: Record<string, unknown>, timeoutMs = this.timeoutMs): Promise<unknown> {
 		const id = this.nextMessageId++
 		const response = new Promise<unknown>((resolve, reject) => {
 			this.requests.set(id, { resolve, reject })
@@ -172,7 +173,7 @@ export class MarionetteClient {
 				...(this.sessionId ? { sessionId: this.sessionId } : {}),
 			}]))
 		})
-		return await withTimeout(response, this.timeoutMs, `${name} timed out`)
+		return await withTimeout(response, timeoutMs, `${name} timed out`)
 	}
 
 	private receive(packet: MarionettePacket): void {

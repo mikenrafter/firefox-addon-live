@@ -407,9 +407,12 @@ export class FirefoxSession {
 				width: box.width * scale, height: box.height * scale }`, [box]) as Rect
 	}
 
-	/** Waits until `target` is on screen (its rectangle resolves). */
+	/** Waits until `target` exists and has a size (hidden elements measure 0×0). */
 	async waitForTarget(target: Target, timeoutMs = 5_000): Promise<void> {
-		await waitFor(async () => await this.screenRect(target).then(() => true, () => undefined), timeoutMs, `Timed out waiting for ${JSON.stringify(target)}`)
+		await waitFor(async () => await this.screenRect(target).then(
+			(rect) => rect.width > 0 && rect.height > 0 || undefined,
+			() => undefined,
+		), timeoutMs, `Timed out waiting for ${JSON.stringify(target)}`)
 	}
 
 	/** State of a XUL popup/panel, e.g. `editBookmarkPanel` → "open". */
