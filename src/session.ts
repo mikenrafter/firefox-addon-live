@@ -225,6 +225,7 @@ export class FirefoxSession {
 	async asExtension(body: string, args: unknown[] = []): Promise<unknown> {
 		if (!this.extensionOrigin) throw new Error('No add-on is installed (pass `addon` to start())')
 		// A hidden background tab: nothing changes on screen, so this is safe mid-recording.
+		const probeUrl = `${this.extensionOrigin}/${PROBE_PAGE}`
 		const handle = await this.chrome(`
 			const tab = gBrowser.addTab(arguments[0], {
 				triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
@@ -233,11 +234,14 @@ export class FirefoxSession {
 			tab.setAttribute('data-firefox-addon-live-probe', 'true')
 			gBrowser.hideTab(tab)
 			const { NavigableManager } = ChromeUtils.importESModule('chrome://remote/content/shared/NavigableManager.sys.mjs')
-			return NavigableManager.getIdForBrowser(tab.linkedBrowser)`, [`${this.extensionOrigin}/${PROBE_PAGE}`]) as string
+			return NavigableManager.getIdForBrowser(tab.linkedBrowser)`, [probeUrl]) as string
 		try {
 			await this.client.switchToWindow(handle, false)
 			await this.client.setContext('content')
-			await waitFor(async () => (await this.client.executeScript('return document.readyState').catch(() => '')) === 'complete' || undefined, 10_000, 'Extension page never loaded')
+			// The tab starts on about:blank, which is already "complete"; wait for the add-on's page.
+			await waitFor(async () => await this.client.executeScript(
+				'return document.readyState === "complete" && location.href === arguments[0] ? true : null', [probeUrl],
+			).catch(() => null) as true | null ?? undefined, 10_000, 'Extension page never loaded')
 			// The page's own `browser` global is behind an Xray; waive it and await in page scope.
 			return await this.client.executeAsyncScript(`
 				const done = arguments[arguments.length - 1]
