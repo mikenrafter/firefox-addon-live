@@ -1,0 +1,22 @@
+{
+  "name": "firefox-addon-live",
+  "version": "0.1.0",
+  "description": "Drive a throwaway Firefox with your add-on loaded: live tests and README screenshots/GIFs",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./marionette": "./src/marionette.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

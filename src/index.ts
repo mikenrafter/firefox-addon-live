@@ -1,0 +1,6 @@
+export * from './session'
+export * from './capture'
+export * from './targets'
+export * from './fixtures'
+export { MarionetteClient, MarionetteMessageParser, frameMarionetteMessage } from './marionette'
+export type { ElementReference, MarionettePacket, MarionetteSocket, MarionetteConnectOptions } from './marionette'

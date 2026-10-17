@@ -1,0 +1,26 @@
+{
+	"manifest_version": 2,
+	"name": "firefox-addon-live fixture",
+	"version": "1.0",
+	"browser_specific_settings": {
+		"gecko": {
+			"id": "fixture@firefox-addon-live"
+		}
+	},
+	"permissions": [
+		"storage",
+		"menus",
+		"tabs"
+	],
+	"background": {
+		"scripts": [
+			"background.js"
+		]
+	},
+	"browser_action": {
+		"default_title": "Fixture"
+	},
+	"options_ui": {
+		"page": "options.html"
+	}
+}
